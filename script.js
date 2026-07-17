@@ -20,7 +20,8 @@ const els = {
   dialogTitle: document.querySelector("#dialogTitle"),
   closeDialogButton: document.querySelector("#closeDialogButton"),
   mealId: document.querySelector("#mealId"),
-  photoInput: document.querySelector("#photoInput"),
+  photoCameraInput: document.querySelector("#photoCameraInput"),
+  photoAlbumInput: document.querySelector("#photoAlbumInput"),
   photoPreview: document.querySelector("#photoPreview"),
   photoHint: document.querySelector("#photoHint"),
   nameInput: document.querySelector("#nameInput"),
@@ -29,7 +30,16 @@ const els = {
   saveButton: document.querySelector("#saveButton"),
   photoDialog: document.querySelector("#photoDialog"),
   closePhotoButton: document.querySelector("#closePhotoButton"),
-  largePhoto: document.querySelector("#largePhoto")
+  largePhoto: document.querySelector("#largePhoto"),
+  detailDialog: document.querySelector("#detailDialog"),
+  closeDetailButton: document.querySelector("#closeDetailButton"),
+  detailName: document.querySelector("#detailName"),
+  detailPhotoFrame: document.querySelector("#detailPhotoFrame"),
+  detailPhoto: document.querySelector("#detailPhoto"),
+  detailPhotoPlaceholder: document.querySelector("#detailPhotoPlaceholder"),
+  detailDate: document.querySelector("#detailDate"),
+  detailIngredients: document.querySelector("#detailIngredients"),
+  editFromDetailButton: document.querySelector("#editFromDetailButton")
 };
 
 let db;
@@ -38,6 +48,7 @@ let editingPhotoBlob = null;
 let selectedPhotoBlob = null;
 let lastRandomMealId = null;
 let objectUrls = [];
+let detailPhotoUrl = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   setToday();
@@ -59,7 +70,15 @@ function bindEvents() {
   els.searchInput.addEventListener("input", renderMeals);
   els.closeDialogButton.addEventListener("click", () => els.mealDialog.close());
   els.closePhotoButton.addEventListener("click", () => els.photoDialog.close());
-  els.photoInput.addEventListener("change", handlePhotoChange);
+  els.closeDetailButton.addEventListener("click", () => closeDetailDialog());
+  els.detailDialog.addEventListener("close", clearDetailPhotoUrl);
+  els.editFromDetailButton.addEventListener("click", () => {
+    const id = Number(els.editFromDetailButton.dataset.editId);
+    closeDetailDialog();
+    editMeal(id);
+  });
+  els.photoCameraInput.addEventListener("change", handlePhotoChange);
+  els.photoAlbumInput.addEventListener("change", handlePhotoChange);
   els.mealForm.addEventListener("submit", saveMeal);
 }
 
@@ -141,6 +160,19 @@ function renderMeals() {
   els.mealList.innerHTML = filteredMeals.map((meal) => mealCardHtml(meal)).join("");
   filteredMeals.forEach((meal) => setCardPhoto(meal));
 
+  document.querySelectorAll(".meal-card").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("[data-edit-id], [data-delete-id]")) return;
+      openMealDetail(Number(card.dataset.detailId));
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.target !== card) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openMealDetail(Number(card.dataset.detailId));
+    });
+  });
+
   document.querySelectorAll("[data-edit-id]").forEach((button) => {
     button.addEventListener("click", () => editMeal(Number(button.dataset.editId)));
   });
@@ -149,15 +181,12 @@ function renderMeals() {
     button.addEventListener("click", () => confirmDeleteMeal(Number(button.dataset.deleteId)));
   });
 
-  document.querySelectorAll("[data-photo-id]").forEach((button) => {
-    button.addEventListener("click", () => openLargePhoto(Number(button.dataset.photoId)));
-  });
 }
 
 function mealCardHtml(meal) {
   return `
-    <article class="meal-card">
-      <button class="meal-photo-button" type="button" data-photo-id="${meal.id}" aria-label="${escapeHtml(meal.name)}の写真を大きく見る">
+    <article class="meal-card" data-detail-id="${meal.id}" tabindex="0">
+      <button class="meal-photo-button" type="button" data-photo-id="${meal.id}" aria-label="${escapeHtml(meal.name)}の詳細を見る">
         <div class="meal-photo-placeholder" id="photo-${meal.id}">写真</div>
       </button>
       <div class="meal-body">
@@ -188,7 +217,7 @@ function openMealForm(meal = null) {
   els.mealForm.reset();
   els.photoPreview.classList.remove("has-photo");
   els.photoPreview.removeAttribute("src");
-  els.photoHint.textContent = "写真を撮る・選ぶ";
+  els.photoHint.textContent = "写真を選ぶとここに表示されます";
   selectedPhotoBlob = null;
   editingPhotoBlob = null;
 
@@ -203,7 +232,7 @@ function openMealForm(meal = null) {
       const url = URL.createObjectURL(meal.photoBlob);
       els.photoPreview.src = url;
       els.photoPreview.classList.add("has-photo");
-      els.photoHint.textContent = "写真を変更";
+      els.photoHint.textContent = "写真を変更できます";
       els.photoPreview.onload = () => URL.revokeObjectURL(url);
     }
   } else {
@@ -242,12 +271,14 @@ async function handlePhotoChange(event) {
   if (!file) return;
 
   try {
+    // 撮影でもアルバム選択でも、同じ縮小処理を通してから保存候補にします。
     selectedPhotoBlob = await resizePhoto(file);
     const url = URL.createObjectURL(selectedPhotoBlob);
     els.photoPreview.src = url;
     els.photoPreview.classList.add("has-photo");
-    els.photoHint.textContent = "写真を変更";
+    els.photoHint.textContent = "写真を変更できます";
     els.photoPreview.onload = () => URL.revokeObjectURL(url);
+    event.target.value = "";
   } catch (error) {
     alert("写真を読み込めませんでした。別の写真を選んでください。");
   }
@@ -373,6 +404,39 @@ function openLargePhoto(id) {
   els.largePhoto.onload = () => URL.revokeObjectURL(url);
 }
 
+function openMealDetail(id) {
+  const meal = meals.find((item) => item.id === id);
+  if (!meal) return;
+
+  clearDetailPhotoUrl();
+  els.detailName.textContent = meal.name;
+  els.detailDate.textContent = formatFullDate(meal.date);
+  els.detailDate.dateTime = meal.date;
+  els.detailIngredients.textContent = meal.ingredients || "材料メモなし";
+  els.editFromDetailButton.dataset.editId = String(meal.id);
+  els.detailPhoto.alt = meal.name;
+  els.detailPhoto.removeAttribute("src");
+  els.detailPhotoFrame.classList.remove("has-photo");
+
+  if (meal.photoBlob) {
+    detailPhotoUrl = URL.createObjectURL(meal.photoBlob);
+    els.detailPhoto.src = detailPhotoUrl;
+    els.detailPhotoFrame.classList.add("has-photo");
+  }
+
+  els.detailDialog.showModal();
+}
+
+function closeDetailDialog() {
+  if (els.detailDialog.open) els.detailDialog.close();
+}
+
+function clearDetailPhotoUrl() {
+  if (!detailPhotoUrl) return;
+  URL.revokeObjectURL(detailPhotoUrl);
+  detailPhotoUrl = null;
+}
+
 function showTab(tabName) {
   const isRecord = tabName === "record";
   els.recordPanel.classList.toggle("is-active", isRecord);
@@ -397,6 +461,11 @@ function getLocalDateValue(date = new Date()) {
 function formatDate(value) {
   const [year, month, day] = value.split("-");
   return `${Number(month)}/${Number(day)}`;
+}
+
+function formatFullDate(value) {
+  const [year, month, day] = value.split("-");
+  return `${year}年${Number(month)}月${Number(day)}日`;
 }
 
 function escapeHtml(value) {

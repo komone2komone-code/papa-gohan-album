@@ -53,12 +53,32 @@
 
       <input id="mealId" type="hidden">
 
-      <label class="photo-picker">
+      <div class="photo-picker">
         <span>料理の写真</span>
-        <input id="photoInput" type="file" accept="image/*" capture="environment">
-        <img id="photoPreview" alt="選んだ料理写真のプレビュー">
-        <strong id="photoHint">写真を撮る・選ぶ</strong>
-      </label>
+        <div class="photo-preview-frame">
+          <img id="photoPreview" alt="選んだ料理写真のプレビュー">
+          <strong id="photoHint">写真を選ぶとここに表示されます</strong>
+        </div>
+        <div class="photo-actions">
+          <label class="photo-action">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.2-1.6A1 1 0 0 1 10 4h4a1 1 0 0 1 .8.4L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/>
+              <circle cx="12" cy="12.5" r="3.4"/>
+            </svg>
+            写真を撮る
+            <input id="photoCameraInput" type="file" accept="image/*" capture="environment">
+          </label>
+          <label class="photo-action">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <rect x="4" y="5" width="16" height="14" rx="2.5"/>
+              <path d="m7 16 3.6-4 2.8 3 1.8-2 2.8 3"/>
+              <circle cx="9" cy="9" r="1.2"/>
+            </svg>
+            アルバムから選ぶ
+            <input id="photoAlbumInput" type="file" accept="image/*">
+          </label>
+        </div>
+      </div>
 
       <label class="field">
         <span>料理名 <b>必須</b></span>
@@ -82,6 +102,22 @@
   <dialog class="meal-dialog photo-dialog" id="photoDialog">
     <button class="icon-button photo-close" id="closePhotoButton" type="button" aria-label="閉じる">×</button>
     <img id="largePhoto" alt="料理写真">
+  </dialog>
+
+  <dialog class="meal-dialog detail-dialog" id="detailDialog">
+    <div class="detail-header">
+      <h2 id="detailName">料理の詳細</h2>
+      <button class="icon-button" id="closeDetailButton" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div class="detail-photo-frame" id="detailPhotoFrame">
+      <img id="detailPhoto" alt="料理写真">
+      <span id="detailPhotoPlaceholder">写真</span>
+    </div>
+    <div class="detail-body">
+      <time id="detailDate" datetime=""></time>
+      <p id="detailIngredients"></p>
+      <button class="save-button" id="editFromDetailButton" type="button">編集する</button>
+    </div>
   </dialog>
 
   <script src="script.js"></script>
