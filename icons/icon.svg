@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="パパごはんアルバム">
+  <rect width="512" height="512" rx="96" fill="#fff3d9"/>
+  <circle cx="256" cy="266" r="142" fill="#ffffff"/>
+  <circle cx="256" cy="266" r="108" fill="#f39a4a"/>
+  <path d="M178 249c32-44 86-49 125-28 34 19 47 57 27 85-25 35-92 34-139 8-27-15-31-42-13-65z" fill="#fffaf0"/>
+  <circle cx="325" cy="203" r="34" fill="#9ccf9a"/>
+  <path d="M132 386h248c18 0 32 14 32 32v12H100v-12c0-18 14-32 32-32z" fill="#c9631e"/>
+  <path d="M152 120h208c18 0 32 14 32 32v34H120v-34c0-18 14-32 32-32z" fill="#ffffff"/>
+  <text x="256" y="178" text-anchor="middle" font-family="sans-serif" font-size="56" font-weight="700" fill="#34271f">パパ</text>
+</svg>
