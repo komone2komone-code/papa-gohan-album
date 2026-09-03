@@ -1,5 +1,5 @@
 // アプリ本体だけを保存して、オフラインでも一覧を開けるようにします。
-const CACHE_NAME = "papa-gohan-album-v5";
+const CACHE_NAME = "papa-gohan-album-v6";
 const APP_FILES = [
   "./",
   "./index.html",
