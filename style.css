@@ -67,10 +67,33 @@ img {
   font-weight: 700;
 }
 
-h1 {
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 16px;
-  font-size: clamp(1.65rem, 8vw, 2.25rem);
+}
+
+.title-row h1 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(1.35rem, 6.4vw, 2.25rem);
   line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+
+.handover-button {
+  flex: 0 0 auto;
+  min-width: 72px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--orange-dark);
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .top-actions {
@@ -631,6 +654,78 @@ h1 {
 
 .backup-message.is-success {
   color: var(--green-dark);
+}
+
+.handover-dialog {
+  overflow: auto;
+}
+
+.handover-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.handover-block h3 {
+  margin: 0 0 10px;
+  font-size: 1.02rem;
+}
+
+.handover-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.handover-steps li {
+  position: relative;
+  margin: 0;
+  padding: 0 0 18px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.handover-steps li:last-child {
+  padding-bottom: 0;
+}
+
+.handover-steps li:not(:last-child)::after {
+  content: "↓";
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.handover-done {
+  margin: 10px 0 0;
+  color: var(--green-dark);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.handover-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 243, 217, 0.7);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.handover-close-button {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 12px;
+  background: var(--cream);
+  color: var(--ink);
+  font-weight: 800;
 }
 
 @media (min-width: 680px) {

@@ -15,7 +15,10 @@
   <div class="app-shell">
     <header class="app-header">
       <p class="eyebrow">家族のごはんメモ</p>
-      <h1>パパごはんアルバム</h1>
+      <div class="title-row">
+        <h1>パパごはんアルバム</h1>
+        <button class="handover-button" id="handoverButton" type="button">引き継ぎ</button>
+      </div>
       <div class="top-actions">
         <button class="primary-action" id="openFormButton" type="button">今日のごはんを記録</button>
         <button class="secondary-action" id="pickMealButton" type="button">今日なに食べたい？</button>
@@ -127,6 +130,42 @@
       <time id="detailDate" datetime=""></time>
       <p id="detailIngredients"></p>
       <button class="save-button" id="editFromDetailButton" type="button">編集する</button>
+    </div>
+  </dialog>
+
+  <dialog class="meal-dialog handover-dialog" id="handoverDialog">
+    <div class="handover-panel">
+      <div class="dialog-header">
+        <h2 id="handoverTitle">引き継ぎ</h2>
+        <button class="icon-button" id="closeHandoverButton" type="button" aria-label="閉じる">×</button>
+      </div>
+
+      <section class="handover-block" aria-labelledby="everydayBackupTitle">
+        <h3 id="everydayBackupTitle">普段のバックアップ</h3>
+        <ol class="handover-steps">
+          <li>写真・料理を登録</li>
+          <li>「バックアップを書き出す」を押す</li>
+          <li>ダウンロードフォルダに papa-gohan-backup-日付.json が保存されたことを確認</li>
+          <li>JSONをGoogle Driveへ保存</li>
+        </ol>
+        <p class="handover-done">バックアップ完了</p>
+      </section>
+
+      <section class="handover-block" aria-labelledby="newPhoneTitle">
+        <h3 id="newPhoneTitle">スマホを買い替えたとき</h3>
+        <ol class="handover-steps">
+          <li>新しいスマホで「パパごはんアルバム」を開く</li>
+          <li>「バックアップから復元」を押す</li>
+          <li>Google Driveに保存した最新のJSONを選ぶ</li>
+          <li>確認画面でOK</li>
+        </ol>
+        <p class="handover-done">写真・料理名・材料・日付が復元される</p>
+      </section>
+
+      <p class="handover-note">大切：写真を追加したら、ときどきバックアップを書き出してGoogle Driveへ保存してください</p>
+
+      <button class="save-button" id="handoverExportButton" type="button">今すぐバックアップを書き出す</button>
+      <button class="handover-close-button" id="handoverCloseButton" type="button">閉じる</button>
     </div>
   </dialog>
 

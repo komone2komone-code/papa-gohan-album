@@ -46,7 +46,12 @@ const els = {
   backupExportButton: document.querySelector("#backupExportButton"),
   backupImportButton: document.querySelector("#backupImportButton"),
   backupFileInput: document.querySelector("#backupFileInput"),
-  backupMessage: document.querySelector("#backupMessage")
+  backupMessage: document.querySelector("#backupMessage"),
+  handoverButton: document.querySelector("#handoverButton"),
+  handoverDialog: document.querySelector("#handoverDialog"),
+  closeHandoverButton: document.querySelector("#closeHandoverButton"),
+  handoverExportButton: document.querySelector("#handoverExportButton"),
+  handoverCloseButton: document.querySelector("#handoverCloseButton")
 };
 
 let db;
@@ -103,6 +108,24 @@ function bindEvents() {
     importBackupFromFile(file).catch(() => {
       showBackupMessage("復元に失敗しました。いまの記録は変更していません。", "error");
     });
+  });
+  els.handoverButton.addEventListener("click", () => els.handoverDialog.showModal());
+  els.closeHandoverButton.addEventListener("click", () => els.handoverDialog.close());
+  els.handoverCloseButton.addEventListener("click", () => els.handoverDialog.close());
+  els.handoverExportButton.addEventListener("click", () => {
+    exportBackup().catch(() => {
+      showBackupMessage("バックアップを書き出せませんでした。もう一度お試しください。", "error");
+    });
+  });
+  els.handoverDialog.addEventListener("click", (event) => {
+    if (event.target !== els.handoverDialog) return;
+    const rect = els.handoverDialog.getBoundingClientRect();
+    const inside =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    if (!inside) els.handoverDialog.close();
   });
 }
 
