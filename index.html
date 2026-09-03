@@ -29,6 +29,16 @@
           <input id="searchInput" type="search" inputmode="search" placeholder="例：鶏肉、カレー、玉ねぎ">
         </label>
         <div class="meal-list" id="mealList" aria-live="polite"></div>
+        <section class="backup-section" aria-labelledby="backupTitle">
+          <h2 id="backupTitle" class="backup-title">データのバックアップ</h2>
+          <p class="backup-desc">料理の記録と写真を、1つのファイルに保存・復元できます。外部には送りません。</p>
+          <div class="backup-actions">
+            <button class="backup-button" id="backupExportButton" type="button">バックアップを書き出す</button>
+            <button class="backup-button" id="backupImportButton" type="button">バックアップから復元</button>
+          </div>
+          <input id="backupFileInput" type="file" accept="application/json,.json">
+          <p id="backupMessage" class="backup-message" hidden role="status"></p>
+        </section>
       </section>
 
       <section class="tab-panel" id="randomPanel" aria-labelledby="randomTab">

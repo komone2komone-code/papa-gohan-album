@@ -4,6 +4,9 @@ const DB_VERSION = 1;
 const STORE_NAME = "meals";
 const PHOTO_MAX_SIZE = 1200;
 const PHOTO_QUALITY = 0.76;
+const BACKUP_APP = "papa-gohan-album";
+const BACKUP_VERSION = 1;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const els = {
   openFormButton: document.querySelector("#openFormButton"),
@@ -39,7 +42,11 @@ const els = {
   detailPhotoPlaceholder: document.querySelector("#detailPhotoPlaceholder"),
   detailDate: document.querySelector("#detailDate"),
   detailIngredients: document.querySelector("#detailIngredients"),
-  editFromDetailButton: document.querySelector("#editFromDetailButton")
+  editFromDetailButton: document.querySelector("#editFromDetailButton"),
+  backupExportButton: document.querySelector("#backupExportButton"),
+  backupImportButton: document.querySelector("#backupImportButton"),
+  backupFileInput: document.querySelector("#backupFileInput"),
+  backupMessage: document.querySelector("#backupMessage")
 };
 
 let db;
@@ -80,6 +87,23 @@ function bindEvents() {
   els.photoCameraInput.addEventListener("change", handlePhotoChange);
   els.photoAlbumInput.addEventListener("change", handlePhotoChange);
   els.mealForm.addEventListener("submit", saveMeal);
+  els.backupExportButton.addEventListener("click", () => {
+    exportBackup().catch(() => {
+      showBackupMessage("バックアップを書き出せませんでした。もう一度お試しください。", "error");
+    });
+  });
+  els.backupImportButton.addEventListener("click", () => {
+    hideBackupMessage();
+    els.backupFileInput.value = "";
+    els.backupFileInput.click();
+  });
+  els.backupFileInput.addEventListener("change", () => {
+    const file = els.backupFileInput.files && els.backupFileInput.files[0];
+    if (!file) return;
+    importBackupFromFile(file).catch(() => {
+      showBackupMessage("復元に失敗しました。いまの記録は変更していません。", "error");
+    });
+  });
 }
 
 function initDb() {
@@ -480,6 +504,265 @@ function escapeHtml(value) {
 function clearObjectUrls() {
   objectUrls.forEach((url) => URL.revokeObjectURL(url));
   objectUrls = [];
+}
+
+function showBackupMessage(message, type) {
+  els.backupMessage.hidden = false;
+  els.backupMessage.textContent = message;
+  els.backupMessage.classList.toggle("is-error", type === "error");
+  els.backupMessage.classList.toggle("is-success", type === "success");
+}
+
+function hideBackupMessage() {
+  els.backupMessage.hidden = true;
+  els.backupMessage.textContent = "";
+  els.backupMessage.classList.remove("is-error", "is-success");
+}
+
+function formatDateForFilename(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataUrlToBlob(dataUrl, type) {
+  const parts = String(dataUrl).split(",");
+  if (parts.length < 2) throw new Error("invalid data url");
+  const header = parts[0];
+  const data = parts.slice(1).join(",");
+  const mimeMatch = header.match(/^data:([^;]+)/);
+  const mime = type || (mimeMatch && mimeMatch[1]) || "image/jpeg";
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
+async function serializeMeal(meal) {
+  const record = {};
+  for (const [key, value] of Object.entries(meal)) {
+    if (key === "photoBlob") continue;
+    record[key] = value;
+  }
+  if (meal.photoBlob instanceof Blob) {
+    record.photo = {
+      type: meal.photoBlob.type || "image/jpeg",
+      dataUrl: await blobToDataUrl(meal.photoBlob)
+    };
+  } else {
+    record.photo = null;
+  }
+  return record;
+}
+
+async function buildBackupPayload() {
+  const now = new Date();
+  const serialized = [];
+  for (const meal of meals) {
+    serialized.push(await serializeMeal(meal));
+  }
+  return {
+    app: BACKUP_APP,
+    version: BACKUP_VERSION,
+    exportedAt: now.toISOString(),
+    meals: serialized
+  };
+}
+
+function downloadJsonFile(payload, filename) {
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportBackup(filenamePrefix = "papa-gohan-backup") {
+  hideBackupMessage();
+  await loadMeals();
+  const now = new Date();
+  const filename = `${filenamePrefix}-${formatDateForFilename(now)}.json`;
+  const payload = await buildBackupPayload();
+  downloadJsonFile(payload, filename);
+  showBackupMessage(`「${filename}」を書き出しました。`, "success");
+  return filename;
+}
+
+function isValidPhoto(photo) {
+  if (photo == null) return true;
+  if (typeof photo !== "object") return false;
+  if (typeof photo.dataUrl !== "string" || !photo.dataUrl.startsWith("data:")) return false;
+  if (!photo.dataUrl.includes("base64,")) return false;
+  if (photo.type != null && typeof photo.type !== "string") return false;
+  return true;
+}
+
+function normalizeMealFromBackup(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  if (!Number.isInteger(raw.id) || raw.id < 1) return null;
+  if (typeof raw.name !== "string" || !raw.name.trim()) return null;
+  if (raw.ingredients != null && typeof raw.ingredients !== "string") return null;
+  if (typeof raw.date !== "string" || !DATE_PATTERN.test(raw.date)) return null;
+  if (raw.updatedAt != null && typeof raw.updatedAt !== "string") return null;
+  if (!isValidPhoto(raw.photo)) return null;
+
+  let photoBlob = null;
+  if (raw.photo && raw.photo.dataUrl) {
+    try {
+      photoBlob = dataUrlToBlob(raw.photo.dataUrl, raw.photo.type);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  const meal = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === "photo" || key === "photoBlob") continue;
+    meal[key] = value;
+  }
+  meal.id = raw.id;
+  meal.name = raw.name;
+  meal.ingredients = typeof raw.ingredients === "string" ? raw.ingredients : "";
+  meal.date = raw.date;
+  meal.photoBlob = photoBlob;
+  if (typeof raw.updatedAt === "string") meal.updatedAt = raw.updatedAt;
+  return meal;
+}
+
+function validateBackupData(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, message: "このファイルはバックアップとして使えません。" };
+  }
+  if (data.app !== BACKUP_APP) {
+    return {
+      ok: false,
+      message: "このアプリで書き出したバックアップファイルを選んでください。"
+    };
+  }
+  if (data.version !== BACKUP_VERSION) {
+    return {
+      ok: false,
+      message: "対応していないバックアップ形式です。このアプリで書き出したファイルを選んでください。"
+    };
+  }
+  if (!Array.isArray(data.meals)) {
+    return {
+      ok: false,
+      message: "ファイルの内容が壊れているか、形式が正しくありません。"
+    };
+  }
+
+  const normalized = [];
+  for (const item of data.meals) {
+    const meal = normalizeMealFromBackup(item);
+    if (!meal) {
+      return {
+        ok: false,
+        message: "料理データの一部が壊れているため、復元を中止しました。いまの記録は変更していません。"
+      };
+    }
+    normalized.push(meal);
+  }
+
+  return { ok: true, meals: normalized };
+}
+
+function putMealsInOneTransaction(mealList) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    for (const meal of mealList) {
+      store.put(meal);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+async function importBackupFromFile(file) {
+  hideBackupMessage();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(await file.text());
+  } catch (error) {
+    showBackupMessage(
+      "JSONとして読み込めませんでした。このアプリで書き出したバックアップファイルを選んでください。",
+      "error"
+    );
+    return;
+  }
+
+  const validated = validateBackupData(parsed);
+  if (!validated.ok) {
+    showBackupMessage(validated.message, "error");
+    return;
+  }
+
+  await loadMeals();
+  const existingCount = meals.length;
+  const safetyFilename = `papa-gohan-before-restore-${formatDateForFilename(new Date())}.json`;
+  const safetyPayloadPromise = existingCount > 0 ? buildBackupPayload() : null;
+
+  if (existingCount > 0) {
+    const ok = window.confirm(
+      `既存データがあります。同じIDの料理は上書きされます。\n\nいまの記録は「${safetyFilename}」に保存してから、バックアップの ${validated.meals.length} 件を読み込みます。よろしいですか？`
+    );
+    if (!ok) {
+      showBackupMessage("復元をキャンセルしました。いまの記録は変更していません。", "success");
+      return;
+    }
+
+    try {
+      const payload = await safetyPayloadPromise;
+      downloadJsonFile(payload, safetyFilename);
+    } catch (error) {
+      showBackupMessage(
+        "いまの記録を退避できなかったため、復元を中止しました。いまの記録は変更していません。",
+        "error"
+      );
+      return;
+    }
+  } else {
+    const ok = window.confirm(
+      `バックアップの ${validated.meals.length} 件をこの端末に読み込みます。よろしいですか？`
+    );
+    if (!ok) {
+      showBackupMessage("復元をキャンセルしました。", "success");
+      return;
+    }
+  }
+
+  try {
+    await putMealsInOneTransaction(validated.meals);
+    await loadMeals();
+    renderMeals();
+    const savedNote = existingCount > 0 ? ` いまの記録は「${safetyFilename}」にも保存済みです。` : "";
+    showBackupMessage(
+      `バックアップから ${validated.meals.length} 件を読み込みました。${savedNote}`,
+      "success"
+    );
+  } catch (error) {
+    showBackupMessage("復元に失敗しました。いまの記録は変更していません。", "error");
+  }
 }
 
 function registerServiceWorker() {
