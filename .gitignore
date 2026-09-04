@@ -1,0 +1,7 @@
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.log
+papa-gohan-backup-*.json
+papa-gohan-before-restore-*.json
