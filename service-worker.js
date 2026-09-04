@@ -1,14 +1,13 @@
 // アプリ本体だけを保存して、オフラインでも一覧を開けるようにします。
-const CACHE_NAME = "papa-gohan-album-v6";
+const CACHE_NAME = "papa-gohan-album-v7";
 const APP_FILES = [
   "./",
   "./index.html",
   "./style.css",
   "./script.js",
   "./manifest.json",
-  "./icons/icon.svg",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/papa-gohan-icon-192.png",
+  "./icons/papa-gohan-icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
